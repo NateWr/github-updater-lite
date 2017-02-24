@@ -2,8 +2,8 @@
 
 defined( 'ABSPATH' ) or exit;
 
-if ( ! class_exists( 'GHU_Core' ) ) {
-    class GHU_Core
+if ( ! class_exists( 'TOTC_GHU_Core' ) ) {
+    class TOTC_GHU_Core
     {
         public $update_data = array();
         public $active_plugins = array();
@@ -57,21 +57,29 @@ if ( ! class_exists( 'GHU_Core' ) ) {
 
                     // get plugin tags
                     list( $owner, $repo ) = explode( '/', $temp['github_repo'] );
-                    $request = wp_remote_get( "https://api.github.com/repos/$owner/$repo/tags" );
+                    $request = wp_remote_get( "https://api.github.com/repos/$owner/$repo/releases" );
 
                     // WP error or rate limit exceeded
                     if ( is_wp_error( $request ) || 200 != wp_remote_retrieve_response_code( $request ) ) {
                         break;
                     }
 
+
                     $json = json_decode( $request['body'], true );
 
                     if ( is_array( $json ) && ! empty( $json ) ) {
-                        $latest_tag = $json[0];
-                        $temp['new_version'] = $latest_tag['name'];
+                        $latest_release = $json[0];
+                        $temp['new_version'] = $latest_release['tag_name'];
                         $temp['url'] = "https://github.com/$owner/$repo/";
-                        $temp['package'] = $latest_tag['zipball_url'];
-                        $plugin_data[ $slug ] = $temp;
+                        if ( !empty( $latest_release['assets'] ) && is_array( $latest_release['assets'] ) ) {
+                            foreach ( $latest_release['assets'] as $asset ) {
+                                if ( $asset['name'] == $temp['slug'] . '-' . $temp['new_version'] . '.zip' ) {
+                                    $temp['package'] = $asset['browser_download_url'];
+                                    $plugin_data[ $slug ] = $temp;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -152,5 +160,5 @@ if ( ! class_exists( 'GHU_Core' ) ) {
         }
     }
 
-    new GHU_Core();
+    new TOTC_GHU_Core();
 }
